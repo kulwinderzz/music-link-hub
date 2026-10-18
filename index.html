@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Music Link Hub</title>
+<style>
+:root{--bg:#eef1f6;--card:#fff;--ink:#14213d;--mut:#5d6985;--line:#d5dbe7;--ac:#d6246e;--ok:#14803c;--bad:#c0262d}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1524;--card:#18203a;--ink:#eaeefb;--mut:#9aa6c6;--line:#2b3556;--ac:#ff5c9d;--ok:#4ade80;--bad:#ff7b80}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}.w{max-width:860px;margin:0 auto;padding:28px 16px 60px}
+h1{font-size:clamp(28px,6vw,42px);margin:0 0 6px;letter-spacing:-.02em}.sub{color:var(--mut);margin:0 0 20px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:18px;overflow-x:auto}
+.tabs button{background:none;border:0;padding:10px 16px;font:600 15px inherit;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--ac)}.panel{display:none}.panel.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 200px}.row>button{flex:0 0 auto}
+.btn{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:11px 18px;font:600 15px inherit;cursor:pointer}
+.msg{margin:10px 0 0;font-weight:600}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
+.s{display:flex;justify-content:space-between;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);text-decoration:none;font-weight:600}.s small{color:var(--mut);font-weight:400}
+.hd{display:flex;gap:14px;align-items:center;margin:14px 0}.hd img{width:84px;height:84px;border-radius:8px;object-fit:cover}
+.res{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.res img{width:48px;height:48px;border-radius:6px}.res code{background:var(--bg);padding:2px 6px;border-radius:5px}
+iframe{width:100%;height:560px;border:1px solid var(--line);border-radius:12px;margin-top:12px}
+</style></head><body><div class="w">
+<h1>Music Link Hub</h1><p class="sub">ISRC / UPC daalo, saare stores ke links pao.</p>
+<div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-t="links">Store Links</button><button role="tab" aria-selected="false" data-t="isrc">ISRC Finder</button><button role="tab" aria-selected="false" data-t="upc">UPC Finder</button><button role="tab" aria-selected="false" data-t="smart">Smartlinks</button></div>
+
+<section class="panel on" id="p-links"><div class="card"><div class="row"><input id="c1" placeholder="ISRC ya UPC" aria-label="ISRC or UPC"><button class="btn" id="g1">Get links</button></div><p class="msg" id="m1"></p><div id="o1"></div></div></section>
+<section class="panel" id="p-isrc"><div class="card"><div class="row"><input id="c2" placeholder="Song title + artist" aria-label="Song and artist"><button class="btn" id="g2">Find ISRC</button></div><p class="msg" id="m2"></p><div id="o2"></div></div></section>
+<section class="panel" id="p-upc"><div class="card"><div class="row"><input id="c3" placeholder="Album title + artist" aria-label="Album and artist"><button class="btn" id="g3">Find UPC</button></div><p class="msg" id="m3"></p><div id="o3"></div></div></section>
+<section class="panel" id="p-smart"><div class="card"><div class="row"><input id="c4" placeholder="ISRC ya UPC" aria-label="ISRC or UPC"><button class="btn" id="g4">Create smartlink</button></div><p class="msg" id="m4"></p><div id="o4"></div></div></section>
+</div>
+<script>
+const $=i=>document.getElementById(i);
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const x in a)x=='text'?e.textContent=a[x]:e.setAttribute(x,a[x]);k.forEach(c=>e.append(c));return e};
+const clean=s=>s.replace(/[\s-]/g,'').toUpperCase();
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));$('p-'+b.dataset.t).classList.add('on')});
+async function api(u){const r=await fetch(u);const d=await r.json();if(!r.ok)throw new Error(d.error||'Error');return d}
+function msg(id,t,c){const m=$(id);m.textContent=t;m.className='msg '+(c||'')}
+function bind(btn,inp,fn){$(btn).onclick=fn;$(inp).onkeydown=e=>{if(e.key=='Enter')fn()}}
+bind('g1','c1',async()=>{const c=clean($('c1').value);$('o1').replaceChildren();msg('m1','Dhoondh raha hoon...');
+ try{const d=await api('/api/lookup?code='+encodeURIComponent(c));
+  if(!d.links.some(l=>l.direct)){msg('m1','Is code ka release nahi mila (abhi live na hua ho sakta hai). Search links neeche hain.','bad')}else msg('m1',(d.type=='isrc'?'ISRC':'UPC')+' mil gaya','ok');
+  const h=el('div',{class:'hd'});if(d.meta.cover)h.append(el('img',{src:d.meta.cover,alt:''}));
+  h.append(el('div',{},el('b',{text:d.meta.title||c}),el('div',{text:[d.meta.artist,d.meta.album].filter(Boolean).join(' · ')})));
+  const g=el('div',{class:'grid'});d.links.forEach(l=>g.append(el('a',{class:'s',href:l.url,target:'_blank',rel:'noopener noreferrer'},el('span',{text:l.name}),el('small',{text:l.direct?'Direct link':'Search'}))));
+  $('o1').append(h,g)}catch(e){msg('m1',e.message,'bad')}});
+function finder(type,btn,inp,out,m,label){bind(btn,inp,async()=>{const q=$(inp).value.trim();if(!q)return;$(out).replaceChildren();msg(m,'Dhoondh raha hoon...');
+ try{const d=await api('/api/search?type='+type+'&q='+encodeURIComponent(q));msg(m,d.results.length?'':'Kuch nahi mila','');
+  d.results.forEach(r=>{const row=el('div',{class:'res'});if(r.cover)row.append(el('img',{src:r.cover,alt:''}));
+   row.append(el('div',{style:'flex:1'},el('b',{text:r.title}),el('div',{text:[r.artist,r.year].filter(Boolean).join(' · ')})));
+   if(r.code){row.append(el('code',{text:r.code}));const b=el('button',{class:'btn',text:'Copy'});b.onclick=()=>navigator.clipboard?.writeText(r.code).then(()=>b.textContent='Copied');row.append(b)}else row.append(el('span',{text:label}));
+   $(out).append(row)})}catch(e){msg(m,e.message,'bad')}})}
+finder('isrc','g2','c2','o2','m2','ISRC nahi mila');finder('upc','g3','c3','o3','m3','UPC nahi mila');
+bind('g4','c4',()=>{const c=clean($('c4').value);if(!c)return;const u=location.origin+'/s/'+encodeURIComponent(c);$('o4').replaceChildren();msg('m4','Smartlink ready:','ok');
+ const a=el('a',{href:u,target:'_blank',rel:'noopener',text:u});const b=el('button',{class:'btn',text:'Copy link',style:'margin-left:10px'});b.onclick=()=>navigator.clipboard?.writeText(u).then(()=>b.textContent='Copied');
+ $('o4').append(el('div',{},a,b),el('iframe',{src:u,title:'Smartlink preview'}))});
+</script></body></html>
